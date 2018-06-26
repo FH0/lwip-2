@@ -270,6 +270,13 @@ tcp_input(struct pbuf *p, struct netif *inp)
        are LISTENing for incoming connections. */
     prev = NULL;
     for (lpcb = tcp_listen_pcbs.listen_pcbs; lpcb != NULL; lpcb = lpcb->next) {
+
+#if TUN2SOCKS
+      // go-tun2socks logic
+      // take the first one
+      break;
+#endif /* TUN2SOCKS */
+
       if (lpcb->local_port == tcphdr->dest) {
         if (IP_IS_ANY_TYPE_VAL(lpcb->local_ip)) {
           /* found an ANY TYPE (IPv4/IPv6) match */
@@ -608,6 +615,16 @@ tcp_listen_input(struct tcp_pcb_listen *pcb)
     ip_addr_copy(npcb->local_ip, *ip_current_dest_addr());
     ip_addr_copy(npcb->remote_ip, *ip_current_src_addr());
     npcb->local_port = pcb->local_port;
+
+#if TUN2SOCKS
+    // go-tun2socks logic
+    // Always reset local port to the dest of the connection, because we are
+    // accepting all incomming connections, regardless of there destination addresses,
+    // as such, npcb is acting as the server socket that communicates with the
+    // client socket.
+    npcb->local_port = tcphdr->dest;
+#endif /* TUN2SOCKS */
+
     npcb->remote_port = tcphdr->src;
     npcb->state = SYN_RCVD;
     npcb->rcv_nxt = seqno + 1;
